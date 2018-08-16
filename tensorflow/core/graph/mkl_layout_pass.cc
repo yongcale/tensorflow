@@ -41,6 +41,7 @@ limitations under the License.
 
 #include "tensorflow/core/graph/mkl_graph_util.h"
 #include "tensorflow/core/graph/mkl_layout_pass.h"
+#include "tensorflow/core/util/util.h"
 
 namespace tensorflow {
 
@@ -4316,6 +4317,11 @@ bool RunMklLayoutRewritePass(std::unique_ptr<Graph>* g) {
 
 Status MklLayoutRewritePass::Run(const GraphOptimizationPassOptions& options) {
   if (options.graph == nullptr && options.partition_graphs == nullptr) {
+    return Status::OK();
+  }
+
+  if (DisableMKL()) {
+    VLOG(2) << "TF-MKL: Disabling MKL";
     return Status::OK();
   }
 

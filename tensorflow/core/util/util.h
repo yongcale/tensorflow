@@ -55,7 +55,8 @@ string PrintMemory(const char* ptr, size_t n);
 // StrAppend("tensor", s) is a Python indexing expression.  E.g.,
 // "tensor", "tensor[i]", "tensor[i, j]", etc.
 string SliceDebugString(const TensorShape& shape, const int64 flat);
-
+//disable MKL in runtime
+bool DisableMKL();
 }  // namespace tensorflow
 
 #endif  // TENSORFLOW_UTIL_UTIL_H_

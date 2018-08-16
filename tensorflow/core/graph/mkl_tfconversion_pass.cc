@@ -35,6 +35,7 @@ limitations under the License.
 
 #include "tensorflow/core/graph/mkl_graph_util.h"
 #include "tensorflow/core/graph/mkl_tfconversion_pass.h"
+#include "tensorflow/core/util/util.h"
 
 namespace tensorflow {
 
@@ -413,6 +414,11 @@ bool InsertMklToTfConversionNodes(std::unique_ptr<Graph>* g) {
 
 Status MklToTfConversionPass::Run(const GraphOptimizationPassOptions& options) {
   if (options.graph == nullptr && options.partition_graphs == nullptr) {
+    return Status::OK();
+  }
+
+  if (DisableMKL()) {
+    VLOG(2) << "TF-MKL: Disabling MKL";
     return Status::OK();
   }
 
