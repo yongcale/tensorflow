@@ -120,4 +120,15 @@ string SliceDebugString(const TensorShape& shape, const int64 flat) {
   return result;
 }
 
+bool DisableMKL() {
+  char *tf_disable_mkl = getenv("TF_DISABLE_MKL");
+  if ((tf_disable_mkl != NULL) && (std::stoi(tf_disable_mkl) == 1)) {
+    VLOG(2) << "TF-MKL: Disabling MKL";
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
 }  // namespace tensorflow

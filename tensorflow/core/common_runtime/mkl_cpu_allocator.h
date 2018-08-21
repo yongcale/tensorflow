@@ -28,6 +28,7 @@ limitations under the License.
 #include "tensorflow/core/lib/strings/numbers.h"
 #include "tensorflow/core/lib/strings/str_util.h"
 #include "tensorflow/core/platform/mem.h"
+#include "tensorflow/core/util/util.h"
 
 #ifndef DO_NOT_USE_ML
 #include "i_malloc.h"
@@ -66,6 +67,12 @@ class MklCPUAllocator : public VisitableAllocator {
   ~MklCPUAllocator() override { delete allocator_; }
 
   Status Initialize() {
+    if (DisableMKL()) {
+        VLOG(1) << "TF-MKL: Disabling pool allocator";
+        tf_disable_pool_allocator_flag = true;
+        return Status::OK();
+    }
+
     VLOG(2) << "MklCPUAllocator: In MklCPUAllocator";
 
     // Set upper bound on memory allocation to physical RAM available on the
@@ -113,16 +120,24 @@ class MklCPUAllocator : public VisitableAllocator {
   inline string Name() override { return kName; }
 
   inline void* AllocateRaw(size_t alignment, size_t num_bytes) override {
+    if (tf_disable_pool_allocator_flag) {
+      return port::AlignedMalloc(num_bytes, alignment);
+    }
+
     return allocator_->AllocateRaw(alignment, num_bytes);
   }
 
   inline void DeallocateRaw(void* ptr) override {
+    if (tf_disable_pool_allocator_flag) {
+      port::AlignedFree(ptr);
+      return;
+    }
     allocator_->DeallocateRaw(ptr);
   }
 
-  void GetStats(AllocatorStats* stats) override { allocator_->GetStats(stats); }
+  void GetStats(AllocatorStats* stats) override { if (!tf_disable_pool_allocator_flag) allocator_->GetStats(stats); }
 
-  void ClearStats() override { allocator_->ClearStats(); }
+  void ClearStats() override { if (!tf_disable_pool_allocator_flag) allocator_->ClearStats(); }
 
   void AddAllocVisitor(Visitor visitor) override {
     allocator_->AddAllocVisitor(visitor);
@@ -167,6 +182,7 @@ class MklCPUAllocator : public VisitableAllocator {
   static constexpr const size_t kAlignment = 64;
 
   VisitableAllocator* allocator_;  // owned by this class
+  bool tf_disable_pool_allocator_flag = false;
 };
 
 }  // namespace tensorflow
