@@ -29,6 +29,7 @@ limitations under the License.
 #include "tensorflow/core/platform/tracing.h"
 #include "tensorflow/core/platform/types.h"
 #include "tensorflow/core/public/session_options.h"
+#include "tensorflow/core/util/util.h"
 
 #ifdef INTEL_MKL
 #ifdef _OPENMP
@@ -50,18 +51,20 @@ ThreadPoolDevice::ThreadPoolDevice(const SessionOptions& options,
       scoped_allocator_mgr_(new ScopedAllocatorMgr(name)) {
 #ifdef INTEL_MKL
 #ifdef _OPENMP
-  const char* user_omp_threads = getenv("OMP_NUM_THREADS");
-  if (user_omp_threads == nullptr) {
-    // OMP_NUM_THREADS controls MKL's intra-op parallelization
-    // Default to available physical cores
-    const int mkl_intra_op = port::NumSchedulableCPUs();
-    const int ht = port::NumHyperthreadsPerCore();
-    omp_set_num_threads((mkl_intra_op + ht - 1) / ht);
-  } else {
-    uint64 user_val = 0;
-    if (strings::safe_strtou64(user_omp_threads, &user_val)) {
-      // Superflous but triggers OpenMP loading
-      omp_set_num_threads(user_val);
+  if (!DisableMKL()) {
+    const char* user_omp_threads = getenv("OMP_NUM_THREADS");
+    if (user_omp_threads == nullptr) {
+      // OMP_NUM_THREADS controls MKL's intra-op parallelization
+      // Default to available physical cores
+      const int mkl_intra_op = port::NumSchedulableCPUs();
+      const int ht = port::NumHyperthreadsPerCore();
+      omp_set_num_threads((mkl_intra_op + ht - 1) / ht);
+    } else {
+      uint64 user_val = 0;
+      if (strings::safe_strtou64(user_omp_threads, &user_val)) {
+        // Superflous but triggers OpenMP loading
+        omp_set_num_threads(user_val);
+      }
     }
   }
 #endif  // _OPENMP
